@@ -6,8 +6,8 @@
   <title>Sistem Scanner Kehadiran Asrama</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-  <!-- Enjin Instascan super-sensitif untuk peranti mudah alih -->
-  <script src="https://rawgit.com/schmied/instascan-builds/master/instascan.min.js"></script>
+  <!-- Pustaka Kamera Yang Stabil & Selamat (HTTPS Compliant) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body class="bg-slate-100 font-sans min-h-screen flex flex-col items-center justify-center p-4">
 
@@ -21,14 +21,15 @@
     <div class="p-5 space-y-4">
       <!-- PETAK VIEWPORT KAMERA SCANNER -->
       <div class="text-center space-y-2">
-        <div class="relative w-full rounded-xl overflow-hidden bg-black aspect-square border-2 border-blue-500 shadow-md flex items-center justify-center">
+        <div class="relative w-full rounded-xl overflow-hidden bg-black min-h-[320px] border-2 border-blue-500 shadow-md flex items-center justify-center">
           
-          <video id="preview" class="w-full h-full object-cover"></video>
+          <!-- Kotak Kamera html5-qrcode -->
+          <div id="reader" class="w-full h-full"></div>
           
           <!-- BUTANG PINTAS USER GESTURE -->
           <div id="overlay-mula" class="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center p-6 text-center z-50">
             <p class="text-white text-sm font-semibold mb-4">Klik butang di bawah untuk mengaktifkan kamera peranti.</p>
-            <button onclick="mulaKameraInstascan()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg transition-all cursor-pointer flex items-center gap-2 text-sm uppercase tracking-wider">
+            <button onclick="mulaKameraGitHub()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg transition-all cursor-pointer flex items-center gap-2 text-sm uppercase tracking-wider">
               📷 Aktifkan Kamera Live
             </button>
           </div>
@@ -65,47 +66,44 @@
   </div>
 
   <script>
-    let scanner;
+    let html5QrCode;
     let sedangMemproses = false;
 
-    function mulaKameraInstascan() {
+    function mulaKameraGitHub() {
       document.getElementById('overlay-mula').style.display = 'none';
-
-      scanner = new Instascan.Scanner({ 
-        video: document.getElementById('preview'), 
-        mirror: false, 
-        backgroundScan: false 
-      });
-
-      scanner.addListener('scan', function (content) {
-        if (!sedangMemproses && content) {
-          try {
-            let context = new (window.AudioContext || window.webkitAudioContext)();
-            let osc = context.createOscillator();
-            osc.connect(context.destination);
-            osc.start();
-            setTimeout(() => osc.stop(), 120);
-          } catch(e) {}
-
-          prosesPenghantaranData(content.trim());
+      
+      html5QrCode = new Html5Qrcode("reader");
+      
+      const config = { 
+        fps: 24, 
+        qrbox: function(viewfinderWidth, viewfinderHeight) {
+          let minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+          let edgeSize = Math.floor(minEdge * 0.75); 
+          return { width: edgeSize, height: edgeSize };
         }
-      });
+      };
 
-      Instascan.Camera.getCameras().then(function (cameras) {
-        if (cameras.length > 0) {
-          let backCamera = cameras.find(cam => cam.name.toLowerCase().includes('back') || cam.name.toLowerCase().includes('rear'));
-          if (backCamera) {
-            scanner.start(backCamera);
-          } else {
-            scanner.start(cameras[cameras.length - 1]);
+      html5QrCode.start(
+        { facingMode: "environment" }, 
+        config,
+        (decodedText) => {
+          if (!sedangMemproses) {
+            try {
+              let context = new (window.AudioContext || window.webkitAudioContext)();
+              let osc = context.createOscillator();
+              osc.connect(context.destination);
+              osc.start();
+              setTimeout(() => osc.stop(), 100);
+            } catch(e) {}
+
+            prosesPenghantaranData(decodedText.trim());
           }
-        } else {
-          alert('Tiada perkakasan kamera dikesan.');
-          document.getElementById('overlay-mula').style.display = 'flex';
-        }
-      }).catch(function (e) {
-        alert('Ralat akses kamera: Sila benarkan kebenaran kamera pelayar.');
+        },
+        (errorMessage) => {}
+      ).catch((err) => {
+        console.error(err);
         document.getElementById('overlay-mula').style.display = 'flex';
+        alert("Gagal Akses Kamera. Sila pastikan kebenaran kamera diberikan.");
       });
     }
 
@@ -114,7 +112,7 @@
       if (idInput) prosesPenghantaranData(idInput);
     }
 
-    // Fungsi Khas Berasaskan JSONP Kebal Sekatan CORS Pelayar Telefon
+    // Fungsi Gabungan Khas: Menggunakan JSONP (GET) Untuk Memotong Sekatan CORS Balasan Data
     function prosesPenghantaranData(idDitemui) {
       if (sedangMemproses) return;
       sedangMemproses = true; 
@@ -123,13 +121,13 @@
       lencanaStatus.className = "text-center py-2 px-4 rounded-full font-bold text-sm mb-3 bg-amber-100 text-amber-800 block animate-pulse";
       lencanaStatus.innerText = "Memproses ID: " + idDitemui + "...";
 
-      // ⚠️ GANTIKAN DENGAN URL WEB APP GOOGLE APPS SCRIPT NEW DEPLOYMENT ANDA
+      // ⚠️ GANTIKAN DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA SEBELUM COMMIT
       const urlAPI = "https://script.google.com/macros/s/AKfycbxDN1i4hazFNCh1tkLhB986y90CQZSAbzNPyl0EA1DNGHkhmO9EOcol5YNAX3RBUfqh/exec";
 
-      // Cipta nama fungsi callback dinamik untuk menerima data JSONP
+      // Cipta nama fungsi callback rawak unik
       const namaCallback = "jsonp_callback_" + Math.round(100000 * Math.random());
       
-      // Definisikan fungsi callback secara global supaya boleh dicapai oleh respon Google
+      // Sediakan fungsi penerima data secara global
       window[namaCallback] = function(data) {
         if (data.status === "SUCCESS") {
           lencanaStatus.className = "text-center py-2 px-4 rounded-full font-bold text-sm mb-3 block bg-emerald-100 text-emerald-800";
@@ -147,7 +145,7 @@
         document.getElementById("kotak-maklumat").classList.remove("hidden");
         document.getElementById("id-manual").value = "";
         
-        // Bersihkan tag skrip lama dari memori HTML
+        // Buang tag skrip bagi membersihkan struktur memori HTML
         delete window[namaCallback];
         document.getElementById(namaCallback).remove();
 
@@ -157,12 +155,11 @@
         }, 3000);
       };
 
-      // Bina elemen <script> secara dinamik untuk membuat panggilan GET bypass CORS
+      // Tembak data menggunakan elemen skrip dinamik bagi mengelakkan sekatan CORS
       const skripDinamik = document.createElement("script");
       skripDinamik.id = namaCallback;
       skripDinamik.src = urlAPI + "?idPelajar=" + encodeURIComponent(idDitemui) + "&callback=" + namaCallback;
       
-      // Masukkan skrip ke dalam dokumen untuk mencetuskan penghantaran data
       document.body.appendChild(skripDinamik);
     }
   </script>
