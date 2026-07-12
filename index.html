@@ -6,8 +6,8 @@
   <title>Sistem Scanner Kehadiran Asrama</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-  <!-- Pustaka QR Scanner Penuh & Stabil -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <!-- Tukar ke Enjin Instascan yang jauh lebih sensitif & laju mengesan QR -->
+  <script src="https://rawgit.com/schmied/instascan-builds/master/instascan.min.js"></script>
 </head>
 <body class="bg-slate-100 font-sans min-h-screen flex flex-col items-center justify-center p-4">
 
@@ -21,15 +21,15 @@
     <div class="p-5 space-y-4">
       <!-- PETAK VIEWPORT KAMERA SCANNER -->
       <div class="text-center space-y-2">
-        <div class="relative w-full rounded-xl overflow-hidden bg-black min-h-[320px] border-2 border-blue-500 shadow-md flex items-center justify-center">
+        <div class="relative w-full rounded-xl overflow-hidden bg-black aspect-square border-2 border-blue-500 shadow-md flex items-center justify-center">
           
-          <!-- Kotak Kamera Sebenar -->
-          <div id="reader" class="w-full h-full"></div>
+          <!-- Instascan menggunakan elemen video tulen secara terus untuk kelajuan maksimum -->
+          <video id="preview" class="w-full h-full object-cover"></video>
           
           <!-- BUTANG PINTAS SKRIN GELAP (USER GESTURE) -->
           <div id="overlay-mula" class="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center p-6 text-center z-50">
             <p class="text-white text-sm font-semibold mb-4">Klik butang di bawah untuk mengaktifkan kamera peranti.</p>
-            <button onclick="mulaKameraGitHub()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg transition-all cursor-pointer flex items-center gap-2 text-sm uppercase tracking-wider">
+            <button onclick="mulaKameraInstascan()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg transition-all cursor-pointer flex items-center gap-2 text-sm uppercase tracking-wider">
               📷 Aktifkan Kamera Live
             </button>
           </div>
@@ -66,53 +66,54 @@
   </div>
 
   <script>
-    let html5QrCode;
+    let scanner;
     let sedangMemproses = false;
 
-    function mulaKameraGitHub() {
-      // Hilangkan overlay sebaik sahaja butang ditekan
+    function mulaKameraInstascan() {
+      // Hilangkan overlay menu utama
       document.getElementById('overlay-mula').style.display = 'none';
-      
-      html5QrCode = new Html5Qrcode("reader");
-      
-      // KONFIGURASI PREMIUM UNTUK IMBASAN LAJU
-      const config = { 
-        fps: 24, // Kadar imbasan tinggi untuk menangkap kod QR dengan lebih responsif
-        qrbox: function(viewfinderWidth, viewfinderHeight) {
-          let minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-          let edgeSize = Math.floor(minEdge * 0.70); // Ambil 70% saiz viewport kamera
-          return { width: edgeSize, height: edgeSize };
-        },
-        experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true // Gunakan pecutan perkakasan telefon jika disokong
+
+      // Konfigurasi enjin scanner instascan secara terus pada elemen video
+      scanner = new Instascan.Scanner({ 
+        video: document.getElementById('preview'), 
+        mirror: false, // Matikan fungsi cermin supaya kod QR tidak terbalik
+        backgroundScan: false 
+      });
+
+      // Tangkap hasil imbasan sebaik sahaja kod QR dikesan oleh lensa kamera
+      scanner.addListener('scan', function (content) {
+        if (!sedangMemproses && content) {
+          // Bunyi Beep maklum balas fizikal
+          try {
+            let context = new (window.AudioContext || window.webkitAudioContext)();
+            let osc = context.createOscillator();
+            osc.connect(context.destination);
+            osc.start();
+            setTimeout(() => osc.stop(), 120);
+          } catch(e) {}
+
+          prosesPenghantaranData(content.trim());
         }
-      };
+      });
 
-      // Panggil kamera belakang peranti
-      html5QrCode.start(
-        { facingMode: "environment" }, 
-        config,
-        (decodedText) => {
-          if (!sedangMemproses) {
-            // Bunyi 'Beep' Ringkas apabila QR Berjaya dikesan
-            try {
-              let context = new (window.AudioContext || window.webkitAudioContext)();
-              let osc = context.createOscillator();
-              osc.type = "sine";
-              osc.frequency.value = 800;
-              osc.connect(context.destination);
-              osc.start();
-              setTimeout(() => osc.stop(), 100);
-            } catch(e) {}
-
-            prosesPenghantaranData(decodedText.trim());
+      // Cari senarai kamera peranti dan paksa guna kamera belakang (Kamera Utama)
+      Instascan.Camera.getCameras().then(function (cameras) {
+        if (cameras.length > 0) {
+          // Cari kamera belakang secara dinamik, jika tiada ambil kamera indeks terakhir (biasanya kamera belakang telefon pintar)
+          let backCamera = cameras.find(cam => cam.name.toLowerCase().includes('back') || cam.name.toLowerCase().includes('rear'));
+          if (backCamera) {
+            scanner.start(backCamera);
+          } else {
+            scanner.start(cameras[cameras.length - 1]);
           }
-        },
-        (errorMessage) => { /* Abaikan maklum balas ralat imbasan per-bingkai */ }
-      ).catch((err) => {
-        console.error("Ralat kritikal kamera:", err);
+        } else {
+          alert('Tiada perkakasan kamera dikesan pada peranti ini.');
+          document.getElementById('overlay-mula').style.display = 'flex';
+        }
+      }).catch(function (e) {
+        console.error(e);
+        alert('Ralat akses kamera: Sila benarkan kebenaran kamera pelayar.');
         document.getElementById('overlay-mula').style.display = 'flex';
-        alert("Gagal Akses Kamera. Sila pastikan pelayar anda diberikan izin (Allow) mengakses kamera.");
       });
     }
 
@@ -123,23 +124,22 @@
 
     function prosesPenghantaranData(idDitemui) {
       if (sedangMemproses) return;
-      sedangMemproses = true; // Kunci sementara sistem (Cooldown) untuk elak penghantaran bertindih
+      sedangMemproses = true; // Kunci imbasan seketika (Cooldown)
 
       const lencanaStatus = document.getElementById("notifikasi-badge");
       lencanaStatus.className = "text-center py-2 px-4 rounded-full font-bold text-sm mb-3 bg-amber-100 text-amber-800 block animate-pulse";
       lencanaStatus.innerText = "Mengimbas ID: " + idDitemui + "...";
 
-      // ⚠️ GANTIKAN STRINGS DI BAWAH DENGAN URL APPS SCRIPT WEB APP ANDA
+      // ⚠️ GANTIKAN DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA SEBELUM COMMIT
       const urlAPI = "1Fz6gn9fhSEjK02j85b1S5akh8UmEv0WrMlD1eQvZnjE";
 
       fetch(urlAPI, {
         method: "POST",
-        mode: "no-cors", // Memintas sekatan CORS Google
+        mode: "no-cors", 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idPelajar: idDitemui })
       })
       .then(() => {
-        // Paparan maklum balas kejayaan menghantar ke Google Sheets
         lencanaStatus.className = "text-center py-2 px-4 rounded-full font-bold text-sm mb-3 block bg-emerald-100 text-emerald-800";
         lencanaStatus.innerText = "✓ REKOD DIHANTAR!";
         
@@ -150,14 +150,13 @@
         document.getElementById("kotak-maklumat").classList.remove("hidden");
         document.getElementById("id-manual").value = "";
 
-        // Cooldown selama 2.5 saat sebelum membuka semula scanner untuk pelajar seterusnya
         setTimeout(() => {
           sedangMemproses = false;
           lencanaStatus.classList.add("hidden");
         }, 2500);
       })
       .catch((error) => {
-        console.error("Ralat API:", error);
+        console.error("Ralat Penghantaran:", error);
         lencanaStatus.className = "text-center py-2 px-4 rounded-full font-bold text-sm mb-3 bg-rose-100 text-rose-800 block";
         lencanaStatus.innerText = "Ralat Sambungan API.";
         setTimeout(() => { sedangMemproses = false; }, 2500);
