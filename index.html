@@ -60,8 +60,9 @@
         <div class="grid grid-cols-3 text-sm"><span class="text-gray-400">Nama</span><span class="col-span-2 font-bold text-slate-800" id="data-nama">-</span></div>
         <div class="grid grid-cols-3 text-sm"><span class="text-gray-400">Tingkatan</span><span class="col-span-2 font-bold text-slate-700" id="data-tingkatan">-</span></div>
         <div class="grid grid-cols-3 text-sm"><span class="text-gray-400">Kelas</span><span class="col-span-2 font-bold text-slate-700" id="data-kelas">-</span></div>
-        <div class="grid grid-cols-3 text-sm"><span class="text-gray-400">Dorm</span><span class="col-span-2 font-bold text-blue-600 animate-pulse" id="data-dorm">-</span></div>
-        <div class="grid grid-cols-3 text-sm pt-1 mt-1 border-t"><span class="text-gray-400">Masa Rekod</span><span class="col-span-2 font-mono text-xs font-bold text-emerald-600" id="data-masa">-</span></div>
+        <div class="grid grid-cols-3 text-sm"><span class="text-gray-400">Dorm</span><span class="col-span-2 font-bold text-blue-600" id="data-dorm">-</span></div>
+        <div class="grid grid-cols-3 text-sm pt-1 mt-1 border-t items-center"><span class="text-gray-400">Status</span><span class="col-span-2"><span id="data-status" class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-0.5 rounded font-black tracking-wider uppercase inline-block">-</span></span></div>
+        <div class="grid grid-cols-3 text-sm"><span class="text-gray-400">Masa Rekod</span><span class="col-span-2 font-mono text-xs font-bold text-slate-500" id="data-masa">-</span></div>
       </div>
     </div>
   </div>
@@ -119,7 +120,7 @@
       lencanaStatus.innerText = "Memproses ID: " + idDitemui + "...";
 
       // ⚠️ GANTIKAN DENGAN URL APPS SCRIPT NEW DEPLOYMENT ANDA
-      const urlAPI = "https://script.google.com/macros/s/AKfycby7WkLNWuhLP0xvUuM_wOP72t05tLVcQE4cWln-tYcOTlriFgyD9A8WphLSPCQjn2tf/exec";
+      const urlAPI = "https://script.google.com/macros/s/AKfycbxvsao6NUeFWbUhBC9vvRL_VSIuvNkor-2BYnqfuARa9Ef0VG8EQc9U91_K92YfOwEr/exec";
 
       fetch(urlAPI, {
         method: "POST",
@@ -140,6 +141,7 @@
           document.getElementById("data-tingkatan").innerText = data.tingkatan;
           document.getElementById("data-kelas").innerText = data.kelas;
           document.getElementById("data-dorm").innerText = data.dorm;
+          document.getElementById("data-status").innerText = data.statusHadir;
           document.getElementById("data-masa").innerText = new Date().toLocaleTimeString('ms-MY', {hour: '2-digit', minute:'2-digit'});
         } else {
           lencanaStatus.className = "text-center py-2 px-4 rounded-full font-bold text-sm mb-3 block bg-rose-100 text-rose-800";
