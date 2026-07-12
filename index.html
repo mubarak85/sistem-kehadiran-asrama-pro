@@ -13,9 +13,14 @@
 
   <div class="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden my-auto">
     <!-- Header -->
-    <div class="bg-blue-600 p-5 text-white text-center">
+    <div class="bg-blue-600 p-5 text-white text-center relative">
       <h1 class="text-xl font-bold tracking-wide">SCANNER LIVE GITHUB</h1>
       <p class="text-xs text-blue-200 mt-1">Imbasan Kamera Video Langsung & Pantas</p>
+      
+      <!-- BUTANG TUKAR KAMERA (Hanya muncul selepas kamera aktif) -->
+      <button id="btn-tukar-kamera" onclick="tukarKamera()" class="hidden absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-full transition-all cursor-pointer text-xs flex items-center gap-1 border border-white/30 font-semibold shadow-sm">
+        🔄 <span class="hidden sm:inline">Tukar Kamera</span>
+      </button>
     </div>
 
     <div class="p-5 space-y-4">
@@ -70,23 +75,27 @@
   <script>
     let html5QrCode;
     let sedangMemproses = false;
+    let modKameraSekarang = "environment"; // Lalai asal: Kamera belakang
+
+    const configKamera = { 
+      fps: 24, 
+      qrbox: function(viewfinderWidth, viewfinderHeight) {
+        let minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+        let edgeSize = Math.floor(minEdge * 0.75); 
+        return { width: edgeSize, height: edgeSize };
+      }
+    };
 
     function mulaKameraGitHub() {
       document.getElementById('overlay-mula').style.display = 'none';
       html5QrCode = new Html5Qrcode("reader");
-      
-      const config = { 
-        fps: 24, 
-        qrbox: function(viewfinderWidth, viewfinderHeight) {
-          let minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-          let edgeSize = Math.floor(minEdge * 0.75); 
-          return { width: edgeSize, height: edgeSize };
-        }
-      };
+      jalankanKamera(modKameraSekarang);
+    }
 
+    function jalankanKamera(facingModeTarget) {
       html5QrCode.start(
-        { facingMode: "user" }, 
-        config,
+        { facingMode: facingModeTarget }, 
+        configKamera,
         (decodedText) => {
           if (!sedangMemproses) {
             try {
@@ -100,10 +109,26 @@
           }
         },
         (errorMessage) => {}
-      ).catch((err) => {
+      ).then(() => {
+        // Tunjukkan butang tukar kamera selepas kamera berjaya dibuka
+        document.getElementById("btn-tukar-kamera").classList.remove("hidden");
+      }).catch((err) => {
         document.getElementById('overlay-mula').style.display = 'flex';
         alert("Gagal Akses Kamera.");
       });
+    }
+
+    // FUNGSI UTAMA UNTUK TUKAR KAMERA LIVE
+    function tukarKamera() {
+      if (!html5QrCode) return;
+      
+      // Tukar mod antara "environment" (belakang) dan "user" (depan)
+      modKameraSekarang = (modKameraSekarang === "environment") ? "user" : "environment";
+      
+      // Hentikan kamera semasa dahulu, kemudian buka semula dengan mod baharu
+      html5QrCode.stop().then(() => {
+        jalankanKamera(modKameraSekarang);
+      }).catch(err => console.error("Gagal menukar kamera:", err));
     }
 
     function hantarIDManual() {
