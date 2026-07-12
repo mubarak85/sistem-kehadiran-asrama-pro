@@ -21,14 +21,15 @@
     <div class="p-5 space-y-4">
       <!-- PETAK VIEWPORT KAMERA SCANNER -->
       <div class="text-center space-y-2">
-        <div class="relative w-full rounded-xl overflow-hidden bg-black aspect-square border-2 border-blue-500 shadow-md flex items-center justify-center">
+        <!-- Ditukar kepada stail tegar min-height untuk mengelakkan pepijat skrin runtuh/gelap -->
+        <div class="relative w-full rounded-xl overflow-hidden bg-black min-h-[300px] border-2 border-blue-500 shadow-md flex items-center justify-center">
           
-          <!-- Kotak Paparan Kamera Video -->
-          <div id="reader" class="w-full h-full bg-black"></div>
+          <!-- Kotak Kamera Sebenar -->
+          <div id="reader" class="w-full h-full"></div>
           
-          <!-- BUTANG PINTAS SKRIN GELAP (USER GESTURE PENTING) -->
-          <div id="overlay-mula" class="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center p-6 text-center z-10 transition-all">
-            <p class="text-white text-sm font-semibold mb-4">Klik butang di bawah untuk memberikan kebenaran fizikal kepada kamera telefon anda.</p>
+          <!-- BUTANG PINTAS SKRIN GELAP (USER GESTURE) -->
+          <div id="overlay-mula" class="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center p-6 text-center z-50">
+            <p class="text-white text-sm font-semibold mb-4">Klik butang di bawah untuk mengaktifkan kamera peranti.</p>
             <button onclick="mulaKameraGitHub()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg transition-all cursor-pointer flex items-center gap-2 text-sm uppercase tracking-wider">
               📷 Aktifkan Kamera Live
             </button>
@@ -69,24 +70,20 @@
     let html5QrCode;
     let sedangMemproses = false;
 
-    // Fungsi Menghidupkan Kamera Terus Melalui Klik Sentuhan Fizikal (User Gesture)
     function mulaKameraGitHub() {
-      // Sorok panel overlay hitam
-      document.getElementById('overlay-mula').classList.add('hidden');
+      // Hilangkan overlay sebaik sahaja butang ditekan
+      document.getElementById('overlay-mula').style.display = 'none';
       
+      // Inisialisasi semula pustaka dengan tetapan asas yang lebih longgar
       html5QrCode = new Html5Qrcode("reader");
       
-      // Konfigurasi scanner yang optimum untuk kamera telefon
+      // Menggunakan konfigurasi saiz statik ringkas yang mesra Android & iOS
       const config = { 
-        fps: 20, 
-        qrbox: function(viewfinderWidth, viewfinderHeight) {
-          let minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-          let edgeSize = Math.floor(minEdge * 0.65);
-          return { width: edgeSize, height: edgeSize };
-        }
+        fps: 10, 
+        qrbox: 250
       };
 
-      // Paksa pelayar telefon mengakses kamera belakang (environment)
+      // Mula panggil kamera belakang
       html5QrCode.start(
         { facingMode: "environment" }, 
         config,
@@ -95,12 +92,12 @@
             prosesPenghantaranData(decodedText.trim());
           }
         },
-        (errorMessage) => { // Abaikan ralat bingkai }
+        (errorMessage) => { /* abaikan ralat imbasan halus */ }
       ).catch((err) => {
-        console.error("Gagal menghidupkan kamera:", err);
-        // Paparkan semula butang jika kamera gagal diakses
-        document.getElementById('overlay-mula').classList.remove('hidden');
-        alert("Akses Kamera Gagal: Sila pastikan anda membuka pautan ini di luar aplikasi WhatsApp (gunakan Chrome atau Safari asal) dan benarkan izin kamera.");
+        console.error("Ralat kritikal kamera:", err);
+        // Paparkan semula butang jika gagal
+        document.getElementById('overlay-mula').style.display = 'flex';
+        alert("Gagal Akses Kamera. Sila pastikan anda memberikan kebenaran (Allow) kamera apabila ditanya oleh pelayar web.");
       });
     }
 
@@ -109,16 +106,15 @@
       if (idInput) prosesPenghantaranData(idInput);
     }
 
-    // Fungsi Utama Menghantar Data dari GitHub ke Google Sheets Backend
     function prosesPenghantaranData(idDitemui) {
       if (sedangMemproses) return;
-      sedangMemproses = true; // Kunci scanner (Cooldown)
+      sedangMemproses = true;
 
       const lencanaStatus = document.getElementById("notifikasi-badge");
       lencanaStatus.className = "text-center py-2 px-4 rounded-full font-bold text-sm mb-3 bg-amber-100 text-amber-800 block animate-pulse";
       lencanaStatus.innerText = "Mengimbas ID: " + idDitemui + "...";
 
-      // GANTIKAN DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA
+      // MASUKKAN URL WEB APP GOOGLE APPS SCRIPT ANDA DI SINI
       const urlAPI = "https://script.google.com/macros/s/AKfycbzaZqavcpOTKGLpi2dFevnmqWXSP_WU86zWWcnVntGaiOBom3w6ZMxJH_98NjPT5uAI/exec";
 
       fetch(urlAPI, {
@@ -144,7 +140,7 @@
         }, 2500);
       })
       .catch((error) => {
-        console.error("Ralat Penghantaran:", error);
+        console.error("Ralat API:", error);
         lencanaStatus.className = "text-center py-2 px-4 rounded-full font-bold text-sm mb-3 bg-rose-100 text-rose-800 block";
         lencanaStatus.innerText = "Ralat Sambungan API.";
         setTimeout(() => { sedangMemproses = false; }, 2500);
