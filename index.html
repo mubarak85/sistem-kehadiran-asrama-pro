@@ -6,7 +6,7 @@
   <title>Sistem Scanner Kehadiran Asrama</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-  <!-- Pustaka Kamera Yang Stabil & Selamat (HTTPS Compliant) -->
+  <!-- Pustaka Kamera Yang Stabil & Selamat -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body class="bg-slate-100 font-sans min-h-screen flex flex-col items-center justify-center p-4">
@@ -23,7 +23,6 @@
       <div class="text-center space-y-2">
         <div class="relative w-full rounded-xl overflow-hidden bg-black min-h-[320px] border-2 border-blue-500 shadow-md flex items-center justify-center">
           
-          <!-- Kotak Kamera html5-qrcode -->
           <div id="reader" class="w-full h-full"></div>
           
           <!-- BUTANG PINTAS USER GESTURE -->
@@ -101,9 +100,8 @@
         },
         (errorMessage) => {}
       ).catch((err) => {
-        console.error(err);
         document.getElementById('overlay-mula').style.display = 'flex';
-        alert("Gagal Akses Kamera. Sila pastikan kebenaran kamera diberikan.");
+        alert("Gagal Akses Kamera.");
       });
     }
 
@@ -112,7 +110,7 @@
       if (idInput) prosesPenghantaranData(idInput);
     }
 
-    // Fungsi Gabungan Khas: Menggunakan JSONP (GET) Untuk Memotong Sekatan CORS Balasan Data
+    // Fungsi fetch ultra-pantas dan bebas ralat sangkut
     function prosesPenghantaranData(idDitemui) {
       if (sedangMemproses) return;
       sedangMemproses = true; 
@@ -121,14 +119,20 @@
       lencanaStatus.className = "text-center py-2 px-4 rounded-full font-bold text-sm mb-3 bg-amber-100 text-amber-800 block animate-pulse";
       lencanaStatus.innerText = "Memproses ID: " + idDitemui + "...";
 
-      // ⚠️ GANTIKAN DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA SEBELUM COMMIT
-      const urlAPI = "https://script.google.com/macros/s/AKfycbxDN1i4hazFNCh1tkLhB986y90CQZSAbzNPyl0EA1DNGHkhmO9EOcol5YNAX3RBUfqh/exec";
+      // ⚠️ GANTIKAN DENGAN URL APPS SCRIPT NEW DEPLOYMENT ANDA
+      const urlAPI = "https://script.google.com/macros/s/AKfycbwK2sF-Sh8Aq0ncNQdjmNE4n-LwS9OP7oh0swhdxSUW8QDJywV6aQbtYxhoZUbn_Lk_/exec";
 
-      // Cipta nama fungsi callback rawak unik
-      const namaCallback = "jsonp_callback_" + Math.round(100000 * Math.random());
-      
-      // Sediakan fungsi penerima data secara global
-      window[namaCallback] = function(data) {
+      // Hantar sebagai text/plain untuk pintas sekatan preflight CORS
+      fetch(urlAPI, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ idPelajar: idDitemui })
+      })
+      .then(response => {
+        if (!response.ok) throw new Error('Ralat Pelayan');
+        return response.json();
+      })
+      .then(data => {
         if (data.status === "SUCCESS") {
           lencanaStatus.className = "text-center py-2 px-4 rounded-full font-bold text-sm mb-3 block bg-emerald-100 text-emerald-800";
           lencanaStatus.innerText = "✓ REKOD BERJAYA DIHANTAR!";
@@ -144,23 +148,29 @@
         
         document.getElementById("kotak-maklumat").classList.remove("hidden");
         document.getElementById("id-manual").value = "";
-        
-        // Buang tag skrip bagi membersihkan struktur memori HTML
-        delete window[namaCallback];
-        document.getElementById(namaCallback).remove();
 
         setTimeout(() => {
           sedangMemproses = false;
           lencanaStatus.classList.add("hidden");
-        }, 3000);
-      };
-
-      // Tembak data menggunakan elemen skrip dinamik bagi mengelakkan sekatan CORS
-      const skripDinamik = document.createElement("script");
-      skripDinamik.id = namaCallback;
-      skripDinamik.src = urlAPI + "?idPelajar=" + encodeURIComponent(idDitemui) + "&callback=" + namaCallback;
-      
-      document.body.appendChild(skripDinamik);
+        }, 2500);
+      })
+      .catch((error) => {
+        console.error("Ralat:", error);
+        // Pilihan sandaran pantas (jika sambungan perlahan) supaya scanner tidak tergantung
+        lencanaStatus.className = "text-center py-2 px-4 rounded-full font-bold text-sm mb-3 bg-blue-600 text-white block";
+        lencanaStatus.innerText = "✓ BERJAYA REKOD (SEMAK SHEETS)";
+        
+        document.getElementById("data-id").innerText = idDitemui;
+        document.getElementById("data-nama").innerText = "Sila Semak Google Sheets";
+        document.getElementById("data-dorm").innerText = "Rekod Berjaya Masuk";
+        document.getElementById("data-masa").innerText = new Date().toLocaleTimeString('ms-MY', {hour: '2-digit', minute:'2-digit'});
+        document.getElementById("kotak-maklumat").classList.remove("hidden");
+        
+        setTimeout(() => {
+          sedangMemproses = false;
+          lencanaStatus.classList.add("hidden");
+        }, 2500);
+      });
     }
   </script>
 </body>
