@@ -54,11 +54,13 @@
     <div class="p-5 border-t border-slate-100 bg-slate-50/50 min-h-[110px]">
       <div id="notifikasi-badge" class="hidden text-center py-2 px-4 rounded-full font-bold text-sm mb-3"></div>
 
-      <div id="kotak-maklumat" class="hidden space-y-1.5 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+      <div id="kotak-maklumat" class="hidden space-y-2 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
         <h3 class="text-center font-bold text-slate-500 uppercase tracking-wider text-[11px] border-b pb-1 mb-2">Data Kemasukan Pelajar</h3>
         <div class="grid grid-cols-3 text-sm"><span class="text-gray-400">No. ID</span><span class="col-span-2 font-mono font-bold text-slate-800" id="data-id">-</span></div>
         <div class="grid grid-cols-3 text-sm"><span class="text-gray-400">Nama</span><span class="col-span-2 font-bold text-slate-800" id="data-nama">-</span></div>
-        <div class="grid grid-cols-3 text-sm"><span class="text-gray-400">Dorm</span><span class="col-span-2 font-bold text-blue-600" id="data-dorm">-</span></div>
+        <div class="grid grid-cols-3 text-sm"><span class="text-gray-400">Tingkatan</span><span class="col-span-2 font-bold text-slate-700" id="data-tingkatan">-</span></div>
+        <div class="grid grid-cols-3 text-sm"><span class="text-gray-400">Kelas</span><span class="col-span-2 font-bold text-slate-700" id="data-kelas">-</span></div>
+        <div class="grid grid-cols-3 text-sm"><span class="text-gray-400">Dorm</span><span class="col-span-2 font-bold text-blue-600 animate-pulse" id="data-dorm">-</span></div>
         <div class="grid grid-cols-3 text-sm pt-1 mt-1 border-t"><span class="text-gray-400">Masa Rekod</span><span class="col-span-2 font-mono text-xs font-bold text-emerald-600" id="data-masa">-</span></div>
       </div>
     </div>
@@ -70,7 +72,6 @@
 
     function mulaKameraGitHub() {
       document.getElementById('overlay-mula').style.display = 'none';
-      
       html5QrCode = new Html5Qrcode("reader");
       
       const config = { 
@@ -94,7 +95,6 @@
               osc.start();
               setTimeout(() => osc.stop(), 100);
             } catch(e) {}
-
             prosesPenghantaranData(decodedText.trim());
           }
         },
@@ -110,7 +110,6 @@
       if (idInput) prosesPenghantaranData(idInput);
     }
 
-    // Fungsi fetch ultra-pantas dan bebas ralat sangkut
     function prosesPenghantaranData(idDitemui) {
       if (sedangMemproses) return;
       sedangMemproses = true; 
@@ -120,9 +119,8 @@
       lencanaStatus.innerText = "Memproses ID: " + idDitemui + "...";
 
       // ⚠️ GANTIKAN DENGAN URL APPS SCRIPT NEW DEPLOYMENT ANDA
-      const urlAPI = "https://script.google.com/macros/s/AKfycbyFw0ePzEbbaTJ_tp4Ub6DXLxEhyeeDNUPQbpWJrejtUYZ2D4mNrYEnc4jtWKmbedEh/exec";
+      const urlAPI = "https://script.google.com/macros/s/AKfycby7WkLNWuhLP0xvUuM_wOP72t05tLVcQE4cWln-tYcOTlriFgyD9A8WphLSPCQjn2tf/exec";
 
-      // Hantar sebagai text/plain untuk pintas sekatan preflight CORS
       fetch(urlAPI, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -139,6 +137,8 @@
           
           document.getElementById("data-id").innerText = idDitemui;
           document.getElementById("data-nama").innerText = data.nama;
+          document.getElementById("data-tingkatan").innerText = data.tingkatan;
+          document.getElementById("data-kelas").innerText = data.kelas;
           document.getElementById("data-dorm").innerText = data.dorm;
           document.getElementById("data-masa").innerText = new Date().toLocaleTimeString('ms-MY', {hour: '2-digit', minute:'2-digit'});
         } else {
@@ -156,20 +156,9 @@
       })
       .catch((error) => {
         console.error("Ralat:", error);
-        // Pilihan sandaran pantas (jika sambungan perlahan) supaya scanner tidak tergantung
-        lencanaStatus.className = "text-center py-2 px-4 rounded-full font-bold text-sm mb-3 bg-blue-600 text-white block";
-        lencanaStatus.innerText = "✓ BERJAYA REKOD (SEMAK SHEETS)";
-        
-        document.getElementById("data-id").innerText = idDitemui;
-        document.getElementById("data-nama").innerText = "Sila Semak Google Sheets";
-        document.getElementById("data-dorm").innerText = "Rekod Berjaya Masuk";
-        document.getElementById("data-masa").innerText = new Date().toLocaleTimeString('ms-MY', {hour: '2-digit', minute:'2-digit'});
-        document.getElementById("kotak-maklumat").classList.remove("hidden");
-        
-        setTimeout(() => {
-          sedangMemproses = false;
-          lencanaStatus.classList.add("hidden");
-        }, 2500);
+        lencanaStatus.className = "text-center py-2 px-4 rounded-full font-bold text-sm mb-3 bg-rose-600 text-white block";
+        lencanaStatus.innerText = "❌ RALAT RANGKAIAN (RE-DEPLOY APPS SCRIPT)";
+        sedangMemproses = false;
       });
     }
   </script>
