@@ -39,6 +39,13 @@
   <div class="lg:col-span-7 space-y-6">
     <input type="date" id="pilih-tarikh" onchange="muatNaikStatistik()" class="w-full p-2 border rounded-xl">
     
+    <!-- BAHAGIAN ANALISA DITAMBAH SEMULA -->
+    <div class="bg-white p-6 rounded-2xl shadow-xl grid grid-cols-3 gap-4 text-center">
+      <div><p class="text-xs">Jumlah</p><p id="stat-total" class="text-2xl font-black">0</p></div>
+      <div><p class="text-xs text-emerald-600">Masuk</p><p id="stat-masuk" class="text-2xl font-black text-emerald-700">0</p></div>
+      <div><p class="text-xs text-red-600">Keluar</p><p id="stat-keluar" class="text-2xl font-black text-red-700">0</p></div>
+    </div>
+
     <div class="bg-white p-6 rounded-2xl shadow-xl">
       <h2 id="tajuk-jadual" class="font-bold text-lg mb-4">⚠️ Senarai Belum Masuk</h2>
       <button onclick="eksportKeExcel()" class="bg-emerald-600 text-white px-4 py-1 rounded-lg text-sm mb-4">💾 Excel</button>
@@ -50,17 +57,13 @@
   </div>
 </div>
 
-<!-- Audio untuk bunyi imbasan -->
 <audio id="beep-sound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
 
 <script>
   let statusSemasa = "MASUK";
   const urlAPI = "https://script.google.com/macros/s/AKfycbzjx7uH6hX4IUV6c2D716uAhDWYHJ7XCHdsSBucoX8HOxhMiggk0hC0BZms-bA6EqVH/exec";
 
-  function playBeep() {
-    const audio = document.getElementById('beep-sound');
-    audio.play().catch(e => console.log("Audio play prevented: ", e));
-  }
+  function playBeep() { document.getElementById('beep-sound').play(); }
 
   function setModPergerakan(mod) {
     statusSemasa = mod;
@@ -72,23 +75,25 @@
 
   function muatNaikStatistik() {
     const tarikh = document.getElementById("pilih-tarikh").value || new Date().toISOString().split('T')[0];
-    fetch(`${urlAPI}?tarikh=${tarikh}`)
-      .then(res => res.json())
-      .then(data => {
-        const tbody = document.getElementById("jadual-data");
-        tbody.innerHTML = "";
-        
-        const senarai = data.belumMasuk || []; 
-        const dataDitapis = senarai.filter(p => statusSemasa === "MASUK" ? p.statusTerakhir === "KELUAR" : p.statusTerakhir === "MASUK");
-        
-        if (dataDitapis.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-400 italic">Tiada data untuk dipaparkan</td></tr>';
-        } else {
-            dataDitapis.forEach(p => {
-              tbody.innerHTML += `<tr><td class="p-2">${p.nama}</td><td class="p-2">${p.tingkatan}</td><td class="p-2">${p.dorm}</td><td class="p-2">${p.masaTerakhir}</td></tr>`;
-            });
-        }
-      });
+    fetch(`${urlAPI}?tarikh=${tarikh}`).then(res => res.json()).then(data => {
+      // Update Statistik Analisa
+      document.getElementById("stat-total").innerText = data.keseluruhan.total;
+      document.getElementById("stat-masuk").innerText = data.keseluruhan.masuk;
+      document.getElementById("stat-keluar").innerText = data.keseluruhan.keluar;
+
+      const tbody = document.getElementById("jadual-data");
+      tbody.innerHTML = "";
+      const senarai = data.belumMasuk || []; 
+      const dataDitapis = senarai.filter(p => statusSemasa === "MASUK" ? p.statusTerakhir === "KELUAR" : p.statusTerakhir === "MASUK");
+      
+      if (dataDitapis.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-400 italic">Tiada data untuk dipaparkan</td></tr>';
+      } else {
+          dataDitapis.forEach(p => {
+            tbody.innerHTML += `<tr><td class="p-2">${p.nama}</td><td class="p-2">${p.tingkatan}</td><td class="p-2">${p.dorm}</td><td class="p-2">${p.masaTerakhir}</td></tr>`;
+          });
+      }
+    });
   }
 
   function prosesManual() {
@@ -116,10 +121,7 @@
     let csv = ["Nama,Tingkatan,Dorm,Masa"];
     document.querySelectorAll("#jadual-data tr").forEach(tr => {
       let tds = tr.querySelectorAll("td");
-      if(tds.length === 4) {
-          let td = Array.from(tds).map(cell => cell.innerText);
-          csv.push(td.join(","));
-      }
+      if(tds.length === 4) csv.push(Array.from(tds).map(cell => cell.innerText).join(","));
     });
     const blob = new Blob(["\ufeff"+csv.join("\n")], {type: "text/csv;charset=utf-8;"});
     const link = document.createElement("a");
