@@ -14,17 +14,14 @@
   <div class="lg:col-span-5 space-y-6">
     <div class="bg-white p-5 rounded-2xl shadow-xl">
       <h1 class="text-xl font-bold mb-4 text-center">HOSTELSCAN PRO</h1>
-      <!-- Butang Mod -->
       <div class="flex gap-2 mb-4">
         <button id="btn-masuk" onclick="setModPergerakan('MASUK')" class="w-full py-2 bg-emerald-600 text-white rounded-lg font-bold">MASUK</button>
         <button id="btn-keluar" onclick="setModPergerakan('KELUAR')" class="w-full py-2 bg-slate-200 text-slate-600 rounded-lg font-bold">KELUAR</button>
       </div>
-      <!-- Kamera -->
       <div id="reader" class="rounded-xl overflow-hidden bg-black mb-4"></div>
       <button onclick="mulaKamera()" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold">Aktifkan Kamera</button>
     </div>
 
-    <!-- BAHAGIAN ISI MANUAL (DIBALIKKAN) -->
     <div class="bg-white p-5 rounded-2xl shadow-xl">
       <h3 class="font-bold mb-2">Taip ID Manual</h3>
       <div class="flex gap-2">
@@ -53,9 +50,17 @@
   </div>
 </div>
 
+<!-- Audio untuk bunyi imbasan -->
+<audio id="beep-sound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
+
 <script>
   let statusSemasa = "MASUK";
   const urlAPI = "https://script.google.com/macros/s/AKfycbzjx7uH6hX4IUV6c2D716uAhDWYHJ7XCHdsSBucoX8HOxhMiggk0hC0BZms-bA6EqVH/exec";
+
+  function playBeep() {
+    const audio = document.getElementById('beep-sound');
+    audio.play().catch(e => console.log("Audio play prevented: ", e));
+  }
 
   function setModPergerakan(mod) {
     statusSemasa = mod;
@@ -67,19 +72,29 @@
 
   function muatNaikStatistik() {
     const tarikh = document.getElementById("pilih-tarikh").value || new Date().toISOString().split('T')[0];
-    fetch(`${urlAPI}?tarikh=${tarikh}`).then(res => res.json()).then(data => {
-      const tbody = document.getElementById("jadual-data");
-      tbody.innerHTML = "";
-      // Filter: Jika MASUK, tunjuk status terakhir KELUAR. Jika KELUAR, tunjuk status terakhir MASUK.
-      const senarai = data.belumMasuk.filter(p => statusSemasa === "MASUK" ? p.statusTerakhir === "KELUAR" : p.statusTerakhir === "MASUK");
-      senarai.forEach(p => {
-        tbody.innerHTML += `<tr><td class="p-2">${p.nama}</td><td class="p-2">${p.tingkatan}</td><td class="p-2">${p.dorm}</td><td class="p-2">${p.masaTerakhir}</td></tr>`;
+    fetch(`${urlAPI}?tarikh=${tarikh}`)
+      .then(res => res.json())
+      .then(data => {
+        const tbody = document.getElementById("jadual-data");
+        tbody.innerHTML = "";
+        
+        const senarai = data.belumMasuk || []; 
+        const dataDitapis = senarai.filter(p => statusSemasa === "MASUK" ? p.statusTerakhir === "KELUAR" : p.statusTerakhir === "MASUK");
+        
+        if (dataDitapis.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-400 italic">Tiada data untuk dipaparkan</td></tr>';
+        } else {
+            dataDitapis.forEach(p => {
+              tbody.innerHTML += `<tr><td class="p-2">${p.nama}</td><td class="p-2">${p.tingkatan}</td><td class="p-2">${p.dorm}</td><td class="p-2">${p.masaTerakhir}</td></tr>`;
+            });
+        }
       });
-    });
   }
 
   function prosesManual() {
     const id = document.getElementById("id-manual").value;
+    if(!id) return;
+    playBeep();
     fetch(urlAPI, { method: "POST", body: JSON.stringify({ idPelajar: id, arahPergerakan: statusSemasa }) })
     .then(res => res.json()).then(data => {
       alert("Berjaya: " + data.nama);
@@ -100,8 +115,11 @@
   function eksportKeExcel() {
     let csv = ["Nama,Tingkatan,Dorm,Masa"];
     document.querySelectorAll("#jadual-data tr").forEach(tr => {
-      let td = Array.from(tr.querySelectorAll("td")).map(cell => cell.innerText);
-      csv.push(td.join(","));
+      let tds = tr.querySelectorAll("td");
+      if(tds.length === 4) {
+          let td = Array.from(tds).map(cell => cell.innerText);
+          csv.push(td.join(","));
+      }
     });
     const blob = new Blob(["\ufeff"+csv.join("\n")], {type: "text/csv;charset=utf-8;"});
     const link = document.createElement("a");
@@ -110,7 +128,10 @@
     link.click();
   }
 
-  window.onload = () => { document.getElementById('pilih-tarikh').value = new Date().toISOString().split('T')[0]; muatNaikStatistik(); };
+  window.onload = () => { 
+    document.getElementById('pilih-tarikh').value = new Date().toISOString().split('T')[0]; 
+    muatNaikStatistik(); 
+  };
 </script>
 </body>
 </html>
